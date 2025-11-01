@@ -28,7 +28,7 @@ def main():
     client = setup_google_sheets()
     
     courses = ['subscribers_bp', 'subscribers_sp', 'subscribers_pj', 
-               'subscribers_oopj', 'subscribers_lp', 'subscribers_oop', 'subscribers_aor1']
+               'subscribers_oopj', 'subscribers_lp', 'subscribers_oop', 'subscribers_aor1', 'subscribers_dmat']
     
     course_mapping = {
         'subscribers_bp': 'bp',
@@ -37,7 +37,8 @@ def main():
         'subscribers_oopj': 'oopj',
         'subscribers_lp': 'lp',
         'subscribers_oop': 'oop',
-        'subscribers_aor1': 'aor1'
+        'subscribers_aor1': 'aor1',
+        'subscribers_dmat': 'dmat'
     }
     
     for sheet_name in courses:
