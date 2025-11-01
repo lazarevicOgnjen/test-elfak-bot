@@ -1,0 +1,338 @@
+name: elfak bot
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Setup Python environment
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # Step 3: Install system dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 wget
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable chromium-chromedriver
+
+      # Step 4: Install Python packages
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # NEW STEP 5: Update email lists from Google Sheets
+      - name: Update email subscriptions
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: python update_emails.py
+
+      # Step 6: Run main scraper
+      - name: Run main script
+        env:
+          MAIL: ${{ secrets.MAIL }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+        run: python main.py
+
+      # ✅ Detect if course content changed
+      - name: Check for course changes
+        id: changes
+        run: |
+          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      # ✅ Load emails from individual subject .md files
+      - name: Load subject emails
+        id: emails
+        run: |
+          # For each course, read the email file and convert to comma-separated list
+          for course in bp sp pj oopj lp oop aor1; do
+            file="${course}_emails.md"
+            if [ -f "$file" ] && [ -s "$file" ]; then
+              # Read emails and convert to comma-separated, removing empty lines
+              email_list=$(grep -v '^$' "$file" | tr '\n' ',' | sed 's/,$//')
+              echo "${course}_emails=${email_list}" >> $GITHUB_OUTPUT
+              echo "📧 Loaded $(echo $email_list | tr -cd ',' | wc -c) emails for $course"
+            else
+              echo "${course}_emails=" >> $GITHUB_OUTPUT
+              echo "❌ No emails found for $course"
+            fi
+          done
+
+      # ✅ Detect which specific course changed
+      - name: Detect course changes
+        id: detect
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          for course in bp sp pj oopj lp oop aor1; do
+            if git diff --name-only HEAD~1 HEAD | grep -q "^${course}.md$"; then
+              echo "${course}_changed=true" >> $GITHUB_OUTPUT
+              echo "🔄 $course has new updates"
+            else
+              echo "${course}_changed=false" >> $GITHUB_OUTPUT
+            fi
+          done
+
+      # ✅ Commit all changes (course content + email lists)
+      - name: Commit changes
+        if: steps.changes.outputs.changed == 'true'
+        uses: lazarevicOgnjen/git-auto-commit-action@v6
+        with:
+          commit_message: "Update course content and subscriptions"
+          file_pattern: "*.md"
+
+      # ✅ Email Notifications - Each subject sends to its own email list
+      - name: BP notification
+        if: steps.detect.outputs.bp_changed == 'true' && steps.emails.outputs.bp_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '📚 BP - New Updates Available'
+          to: ${{ steps.emails.outputs.bp_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <h2>🎓 New Updates in BP (Baze podataka)</h2>
+                <p>New forum posts or updates have been detected in the BP course!</p>
+                <img src="cid:bp_image" alt="BP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4">BP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: bp.png
+
+      - name: SP notification
+        if: steps.detect.outputs.sp_changed == 'true' && steps.emails.outputs.sp_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '📚 SP - New Updates Available'
+          to: ${{ steps.emails.outputs.sp_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <h2>🎓 New Updates in SP (Sistemski softver)</h2>
+                <p>New forum posts or updates have been detected in the SP course!</p>
+                <img src="cid:sp_image" alt="SP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9">SP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: sp.png
+
+      - name: PJ notification
+        if: steps.detect.outputs.pj_changed == 'true' && steps.emails.outputs.pj_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '📚 PJ - New Updates Available'
+          to: ${{ steps.emails.outputs.pj_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <h2>🎓 New Updates in PJ (Programski jezici)</h2>
+                <p>New forum posts or updates have been detected in the PJ course!</p>
+                <img src="cid:pj_image" alt="PJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11">PJ Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: pj.png
+
+      - name: OOPJ notification
+        if: steps.detect.outputs.oopj_changed == 'true' && steps.emails.outputs.oopj_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '📚 OOPJ - New Updates Available'
+          to: ${{ steps.emails.outputs.oopj_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <h2>🎓 New Updates in OOPJ (Objektno orijentisano programiranje - Java)</h2>
+                <p>New forum posts or updates have been detected in the OOPJ course!</p>
+                <img src="cid:oopj_image" alt="OOPJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62">OOPJ Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: oopj.png
+
+      - name: LP notification
+        if: steps.detect.outputs.lp_changed == 'true' && steps.emails.outputs.lp_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '📚 LP - New Updates Available'
+          to: ${{ steps.emails.outputs.lp_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <h2>🎓 New Updates in LP (Logičko programiranje)</h2>
+                <p>New forum posts or updates have been detected in the LP course!</p>
+                <img src="cid:lp_image" alt="LP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41">LP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: lp.png
+
+      - name: OOP notification
+        if: steps.detect.outputs.oop_changed == 'true' && steps.emails.outputs.oop_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '📚 OOP - New Updates Available'
+          to: ${{ steps.emails.outputs.oop_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <h2>🎓 New Updates in OOP (Objektno orijentisano programiranje)</h2>
+                <p>New forum posts or updates have been detected in the OOP course!</p>
+                <img src="cid:oop_image" alt="OOP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=45">OOP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: oop.png
+
+      - name: AOR1 notification
+        if: steps.detect.outputs.aor1_changed == 'true' && steps.emails.outputs.aor1_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '📚 AOR1 - New Updates Available'
+          to: ${{ steps.emails.outputs.aor1_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <h2>🎓 New Updates in AOR1 (Arhitektura i organizacija računara 1)</h2>
+                <p>New forum posts or updates have been detected in the AOR1 course!</p>
+                <img src="cid:aor1_image" alt="AOR1 Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=139">AOR1 Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: aor1.png
