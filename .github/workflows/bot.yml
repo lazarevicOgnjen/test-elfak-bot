@@ -38,7 +38,7 @@ jobs:
       - name: Update email subscriptions
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-        run: python update_emails.py
+        run: python email.py
 
       # Step 6: Run main scraper
       - name: Run main script
@@ -51,7 +51,7 @@ jobs:
       - name: Check for course changes
         id: changes
         run: |
-          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md
+          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md
           if git diff --cached --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
@@ -63,7 +63,7 @@ jobs:
         id: emails
         run: |
           # For each course, read the email file and convert to comma-separated list
-          for course in bp sp pj oopj lp oop aor1; do
+          for course in bp sp pj oopj lp oop aor1 dmat; do
             file="${course}_emails.md"
             if [ -f "$file" ] && [ -s "$file" ]; then
               # Read emails and convert to comma-separated, removing empty lines
@@ -107,17 +107,15 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '📚 BP - New Updates Available'
+          subject: '🎓 Baze podataka'
           to: ${{ steps.emails.outputs.bp_emails }}
           from: ELFAK Bot
           html_body: |
             <html>
               <body>
-                <h2>🎓 New Updates in BP (Baze podataka)</h2>
-                <p>New forum posts or updates have been detected in the BP course!</p>
                 <img src="cid:bp_image" alt="BP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4">BP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">BP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
@@ -133,6 +131,38 @@ jobs:
             </html>
           attachments: bp.png
 
+      - name: DMAT notification
+        if: steps.detect.outputs.dmat_changed == 'true' && steps.emails.outputs.dmat_emails != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Diskretna matematika'
+          to: ${{ steps.emails.outputs.dmat_emails }}
+          from: ELFAK Bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:dmat_image" alt="DMAT Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=97&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">DMAT Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Update Preferences
+                  </a>
+                  | 
+                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
+                    Unsubscribe
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: dmat.png
+
       - name: SP notification
         if: steps.detect.outputs.sp_changed == 'true' && steps.emails.outputs.sp_emails != ''
         uses: dawidd6/action-send-mail@v3
@@ -141,17 +171,15 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '📚 SP - New Updates Available'
+          subject: '🎓 Strukture podataka'
           to: ${{ steps.emails.outputs.sp_emails }}
           from: ELFAK Bot
           html_body: |
             <html>
               <body>
-                <h2>🎓 New Updates in SP (Sistemski softver)</h2>
-                <p>New forum posts or updates have been detected in the SP course!</p>
                 <img src="cid:sp_image" alt="SP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9">SP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">SP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
@@ -175,17 +203,15 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '📚 PJ - New Updates Available'
+          subject: '🎓 Programski jezici'
           to: ${{ steps.emails.outputs.pj_emails }}
           from: ELFAK Bot
           html_body: |
             <html>
               <body>
-                <h2>🎓 New Updates in PJ (Programski jezici)</h2>
-                <p>New forum posts or updates have been detected in the PJ course!</p>
                 <img src="cid:pj_image" alt="PJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11">PJ Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">PJ Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
@@ -209,17 +235,15 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '📚 OOPJ - New Updates Available'
+          subject: '🎓 Objektno orijentisano projektovanje'
           to: ${{ steps.emails.outputs.oopj_emails }}
           from: ELFAK Bot
           html_body: |
             <html>
               <body>
-                <h2>🎓 New Updates in OOPJ (Objektno orijentisano programiranje - Java)</h2>
-                <p>New forum posts or updates have been detected in the OOPJ course!</p>
                 <img src="cid:oopj_image" alt="OOPJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62">OOPJ Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOPJ Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
@@ -243,17 +267,15 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '📚 LP - New Updates Available'
+          subject: '🎓 Logičko projektovanje'
           to: ${{ steps.emails.outputs.lp_emails }}
           from: ELFAK Bot
           html_body: |
             <html>
               <body>
-                <h2>🎓 New Updates in LP (Logičko programiranje)</h2>
-                <p>New forum posts or updates have been detected in the LP course!</p>
                 <img src="cid:lp_image" alt="LP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41">LP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">LP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
@@ -277,17 +299,15 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '📚 OOP - New Updates Available'
+          subject: '🎓 Objektno orijentisano programiranje'
           to: ${{ steps.emails.outputs.oop_emails }}
           from: ELFAK Bot
           html_body: |
             <html>
               <body>
-                <h2>🎓 New Updates in OOP (Objektno orijentisano programiranje)</h2>
-                <p>New forum posts or updates have been detected in the OOP course!</p>
                 <img src="cid:oop_image" alt="OOP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=45">OOP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
@@ -311,17 +331,15 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '📚 AOR1 - New Updates Available'
+          subject: '🎓 Arhitektura i organizacija računara 1'
           to: ${{ steps.emails.outputs.aor1_emails }}
           from: ELFAK Bot
           html_body: |
             <html>
               <body>
-                <h2>🎓 New Updates in AOR1 (Arhitektura i organizacija računara 1)</h2>
-                <p>New forum posts or updates have been detected in the AOR1 course!</p>
                 <img src="cid:aor1_image" alt="AOR1 Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=139">AOR1 Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=139&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2020&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">AOR1 Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
