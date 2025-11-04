@@ -1,6 +1,6 @@
 import gspread
 
-SPREADSHEET_URL = "YOUR_SHEET_URL"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/14V5NBooFYgg144Zsxzgq7E8R9SIA-JhOZynAlssEKoY/edit?usp=sharing"
 
 subjects = ["sip","bp","lp","sp","aor1","oop","oopj","pj","dmat","aip","uur"]
 
