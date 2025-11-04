@@ -49,30 +49,12 @@ jobs:
       - name: Check for course changes
         id: changes
         run: |
-          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md
+          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md sip_emails.md
           if git diff --cached --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
-
-      # ✅ Load emails from individual subject .md files
-      - name: Load subject emails
-        id: emails
-        run: |
-          # For each course, read the email file and convert to comma-separated list
-          for course in bp sp pj oopj lp oop aor1 dmat; do
-            file="${course}_emails.md"
-            if [ -f "$file" ] && [ -s "$file" ]; then
-              # Read emails and convert to comma-separated, removing empty lines
-              email_list=$(grep -v '^$' "$file" | tr '\n' ',' | sed 's/,$//')
-              echo "${course}_emails=${email_list}" >> $GITHUB_OUTPUT
-              echo "📧 Loaded $(echo $email_list | tr -cd ',' | wc -c) emails for $course"
-            else
-              echo "${course}_emails=" >> $GITHUB_OUTPUT
-              echo "❌ No emails found for $course"
-            fi
-          done
 
       # ✅ Detect which specific course changed
       - name: Detect course changes
