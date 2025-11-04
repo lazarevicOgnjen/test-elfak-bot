@@ -36,8 +36,6 @@ jobs:
 
       # NEW STEP 5: Update email lists from Google Sheets
       - name: Update email subscriptions
-        env:
-          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: python email.py
 
       # Step 6: Run main scraper
