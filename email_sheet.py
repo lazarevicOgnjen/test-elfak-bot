@@ -1,32 +1,37 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 import time
 import os
 
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/14V5NBooFYgg144Zsxzgq7E8R9SIA-JhOZynAlssEKoY/edit?usp=sharing"
+# Chrome options
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.binary_location = "/usr/bin/google-chrome"
 
-# Folder to save emails
-os.makedirs("emails", exist_ok=True)
+# Chrome driver setup
+browser_driver = Service('/usr/bin/chromedriver')
 
-driver = webdriver.Chrome()
-driver.get(SPREADSHEET_URL)
-time.sleep(5)  # wait for page to load
+# Start the browser
+page_to_scrape = webdriver.Chrome(service=browser_driver, options=chrome_options)
 
-# Get all sheet tabs
-tabs = driver.find_elements(By.CSS_SELECTOR, ".docs-sheet-tab")  # tab buttons at bottom
+try:
+    page_to_scrape.get("https://docs.google.com/spreadsheets/d/14V5NBooFYgg144Zsxzgq7E8R9SIA-JhOZynAlssEKoY/edit?usp=sharing")
+    time.sleep(2)
 
-for tab in tabs:
-    tab_name = tab.text.strip()
-    tab.click()
-    time.sleep(2)  # wait for tab content to load
+    # sip
+    page_to_scrape.find_element(By.XPATH, "/html/body/div[4]/div/div[4]/table/tbody/tr[2]/td[3]/div/div[3]/div/div[2]/div/div/div[1]/span").click()
+    time.sleep(2) 
+    SIP = page_to_scrape.find_element(By.XPATH, '/html/body/div[4]/div/div[2]/div/div[5]/div[2]/div[1]/div[2]')
+    SIPtext = SIP.text
+    with open("sip_emails.md", "w") as novosti_sip:
+        novosti_sip.write(SIPtext)
 
-    # Get first column values
-    cells = driver.find_elements(By.CSS_SELECTOR, 'div[row] > div[cell="0"]')  # simplified selector
-    emails = [c.text.strip() for c in cells if c.text.strip()]
 
-    filename = f"{tab_name}_emails.md"
-    with open(filename, "w") as f:
-        f.write("\n".join(emails))
-    print(f"✅ {len(emails)} emails saved to {filename}")
 
-driver.quit()
+finally:
+    # Close the browser
+    page_to_scrape.quit()
