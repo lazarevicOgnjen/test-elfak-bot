@@ -1,44 +1,31 @@
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
+import gspread
 
-def setup_sheets():
-    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    
-    creds_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
-    creds_dict = json.loads(creds_json)
-    
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-    return gspread.authorize(creds)
+credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+if not credentials_json:
+    raise RuntimeError("GOOGLE_CREDENTIALS_JSON not set")
 
-def main():
-    client = setup_sheets()
-    
-    YOUR_SHEET_NAME = "ELFAK sheet" 
-    
-    courses = ['bp', 'sp', 'pj', 'oopj', 'lp', 'oop', 'aor1', 'dmat']
-    
+credentials_dict = json.loads(credentials_json)
+
+gc = gspread.service_account_from_dict(credentials_dict)
+
+SPREADSHEET_NAME = "Elfak bot"
+sh = gc.open(SPREADSHEET_NAME)
+
+subjects = ["sip","bp","lp","sp","aor1","oop","oopj","pj","dmat","aip","uur"]
+
+for subj in subjects:
     try:
-        sheet = client.open(YOUR_SHEET_NAME)
-        
-        for course in courses:
-            worksheet = sheet.worksheet(course)
-            emails = worksheet.col_values(1)
-            
-            # Clean emails
-            emails = [email.strip() for email in emails if email.strip() and '@' in email]
-            
-            # Save to .md file
-            filename = f"{course}_emails.md"
-            with open(filename, 'w') as f:
-                for email in sorted(set(emails)):
-                    f.write(f"{email}\n")
-            
-            print(f"✅ {course}: {len(emails)} emails")
-            
-    except Exception as e:
-        print(f"❌ Error: {e}")
+        ws = sh.worksheet(subj)
+    except gspread.exceptions.WorksheetNotFound:
+        print(f"⚠️ Sheet '{subj}' not found, skipping...")
+        continue
 
-if __name__ == "__main__":
-    main()
+    emails = [e.strip() for e in ws.col_values(1) if e.strip()]
+
+    filename = f"{subj}_emails.md"
+    with open(filename, "w") as f:
+        f.write("\n".join(emails))
+
+    print(f"✅ {len(emails)} emails saved to {filename}")
