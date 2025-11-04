@@ -1,25 +1,32 @@
-import gspread
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+import time
+import os
 
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/14V5NBooFYgg144Zsxzgq7E8R9SIA-JhOZynAlssEKoY/edit?usp=sharing"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/14V5NBooFYgg144Zsxzgq7E8R9SIA-JhOZynAlssEKoY/edit"
 
-subjects = ["sip","bp","lp","sp","aor1","oop","oopj","pj","dmat","aip","uur"]
+# Folder to save emails
+os.makedirs("emails", exist_ok=True)
 
-sh = gspread.public().open_by_url(SPREADSHEET_URL)
+driver = webdriver.Chrome()
+driver.get(SPREADSHEET_URL)
+time.sleep(5)  # wait for page to load
 
-for subj in subjects:
-    try:
-        
-        ws = sh.worksheet(subj)
+# Get all sheet tabs
+tabs = driver.find_elements(By.CSS_SELECTOR, ".docs-sheet-tab")  # tab buttons at bottom
 
-        
-        emails = [e.strip() for e in ws.col_values(1) if e.strip()]
+for tab in tabs:
+    tab_name = tab.text.strip()
+    tab.click()
+    time.sleep(2)  # wait for tab content to load
 
-        
-        filename = f"{subj}_emails.md"
-        with open(filename, "w") as f:
-            f.write("\n".join(emails))
+    # Get first column values
+    cells = driver.find_elements(By.CSS_SELECTOR, 'div[row] > div[cell="0"]')  # simplified selector
+    emails = [c.text.strip() for c in cells if c.text.strip()]
 
-        print(f"✅ {len(emails)} emails saved to {filename}")
+    filename = f"{tab_name}_emails.md"
+    with open(filename, "w") as f:
+        f.write("\n".join(emails))
+    print(f"✅ {len(emails)} emails saved to {filename}")
 
-    except gspread.exceptions.WorksheetNotFound:
-        print(f"⚠️ Sheet '{subj}' not found, skipping...")
+driver.quit()
