@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 import time
 import os
 
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/14V5NBooFYgg144Zsxzgq7E8R9SIA-JhOZynAlssEKoY/edit"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/14V5NBooFYgg144Zsxzgq7E8R9SIA-JhOZynAlssEKoY/edit?usp=sharing"
 
 # Folder to save emails
 os.makedirs("emails", exist_ok=True)
