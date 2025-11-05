@@ -34,10 +34,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # NEW STEP 5: Update email lists from Google Sheets
-      - name: Update email subscriptions
-        run: python email_sheet.py
-
       # Step 6: Run main scraper
       - name: Run main script
         env:
