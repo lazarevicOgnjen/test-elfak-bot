@@ -13,7 +13,7 @@ HTML_BODY = """
 <p><img src="cid:embedded_image" style="width:300px;border-radius:10px;"></p>
 <p>SIP -> <a href="">here</a>link</p>
 
-<p>Google form -> <a href="">here</a>link</p>
+<p>Google form -> <a href="https://forms.gle/2XaMVYxLjiVikKCw5">link</a></p>
 </body></html>
 """
 
