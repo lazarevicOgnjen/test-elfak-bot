@@ -1,1 +1,0 @@
-lazarevic@elfak.rs
