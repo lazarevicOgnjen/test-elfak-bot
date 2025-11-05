@@ -31,9 +31,15 @@ def save_content_and_screenshot(url, xpath, md_filename, png_filename):
     driver.get(url)
     element = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
     
+    # Get the text content
+    content = element.text
+    print(f"Scraped {len(content)} characters for {md_filename}")
+    
     # Save text to markdown
-    with open(md_filename, "w") as f:
-        f.write(element.text)
+    with open(md_filename, "w", encoding='utf-8') as f:
+        f.write(content)
+    
+    print(f"Saved content to {md_filename}")
     
     # Adjust window size for screenshot
     width = max(element.size['width'], 1200)
@@ -41,6 +47,7 @@ def save_content_and_screenshot(url, xpath, md_filename, png_filename):
     driver.set_window_size(width, height)
     driver.execute_script("arguments[0].scrollIntoView(true);", element)
     element.screenshot(png_filename)
+    print(f"Saved screenshot to {png_filename}")
 
 def login_to_cs():
     """Handle the login process with better error handling"""
