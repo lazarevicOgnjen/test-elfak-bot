@@ -4,7 +4,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 import os
+import time
 
 # Chrome options
 chrome_options = Options()
@@ -22,7 +24,7 @@ browser_driver = Service('/usr/bin/chromedriver')
 
 # Start the browser
 driver = webdriver.Chrome(service=browser_driver, options=chrome_options)
-wait = WebDriverWait(driver, 10)
+wait = WebDriverWait(driver, 15)
 
 def save_content_and_screenshot(url, xpath, md_filename, png_filename):
     """Navigate to a URL, extract text, and take a screenshot."""
@@ -40,8 +42,55 @@ def save_content_and_screenshot(url, xpath, md_filename, png_filename):
     driver.execute_script("arguments[0].scrollIntoView(true);", element)
     element.screenshot(png_filename)
 
+def login_to_cs():
+    """Handle the login process with better error handling"""
+    try:
+        # Navigate to login page
+        driver.get("https://cs.elfak.ni.ac.rs/nastava/login/index.php")
+        
+        # Click on Office 365 login
+        office365_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[2]/div[2]/div/div/section/div/div[2]/div/div/div/div/div/div[2]/div[3]/div/a")))
+        office365_btn.click()
+        
+        # Wait for email field and enter email
+        mail_field = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="i0116"]')))
+        mail_field.clear()
+        mail_field.send_keys(os.environ['MAIL'])
+        
+        # Click next button
+        next_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="idSIButton9"]')))
+        next_btn.click()
+        
+        # Wait for password field and enter password
+        password_field = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="i0118"]')))
+        password_field.clear()
+        password_field.send_keys(os.environ['PASSWORD'])
+        
+        # Click sign in button - handle potential redirects
+        signin_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="idSIButton9"]')))
+        signin_btn.click()
+        
+        # Wait for and click "No" or "Back" button if it appears
+        try:
+            no_btn = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, '//*[@id="idBtn_Back"]'))
+            )
+            no_btn.click()
+        except TimeoutException:
+            print("No 'Stay signed in' prompt appeared")
+        
+        # Wait for login to complete by checking for CS navigation
+        wait.until(EC.presence_of_element_located((By.XPATH, '//*[contains(@class, "breadcrumb") or contains(@class, "navbar")]')))
+        print("Successfully logged in to CS")
+        
+    except Exception as e:
+        print(f"Login failed: {e}")
+        # Take screenshot for debugging
+        driver.save_screenshot("login_error.png")
+        raise
+
 try:
-    # SIP page
+    # SIP page (no login required)
     save_content_and_screenshot(
         "https://sip.elfak.ni.ac.rs/",
         '//*[@id="novosti"]',
@@ -50,15 +99,7 @@ try:
     )
 
     # Login to CS
-    driver.get("https://cs.elfak.ni.ac.rs/nastava/login/index.php")
-    wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[2]/div[2]/div/div/section/div/div[2]/div/div/div/div/div/div[2]/div[3]/div/a"))).click()
-    mail = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="i0116"]')))
-    mail.send_keys(os.environ['MAIL'])
-    driver.find_element(By.XPATH, '//*[@id="idSIButton9"]').click()
-    password = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="i0118"]')))
-    password.send_keys(os.environ['PASSWORD'])
-    driver.find_element(By.XPATH, '//*[@id="idSIButton9"]').click()
-    wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="idBtn_Back"]'))).click()
+    login_to_cs()
 
     # List of forum pages to scrape
     forum_pages = [
@@ -75,7 +116,13 @@ try:
     ]
 
     for name, url in forum_pages:
-        save_content_and_screenshot(url, '//*[@id="region-main"]', f"{name}.md", f"{name}.png")
+        try:
+            save_content_and_screenshot(url, '//*[@id="region-main"]', f"{name}.md", f"{name}.png")
+            print(f"Successfully scraped {name}")
+        except Exception as e:
+            print(f"Failed to scrape {name}: {e}")
+            # Continue with other courses even if one fails
+            continue
 
 finally:
     driver.quit()
