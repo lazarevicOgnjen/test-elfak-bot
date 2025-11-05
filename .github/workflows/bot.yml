@@ -8,17 +8,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Setup Python environment
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Step 3: Install system dependencies
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -28,20 +25,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable chromium-chromedriver
 
-      # Step 4: Install Python packages
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 5: Run main scraper
       - name: Run main script
         env:
           MAIL: ${{ secrets.MAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: python main.py
 
-      # Step 6: Detect which courses changed
       - name: Detect course changes
         id: detect
         run: |
@@ -53,7 +47,6 @@ jobs:
             fi
           done
 
-      # Step 7: Commit changes if any
       - name: Commit changes
         if: steps.detect.outputs.changed == 'true'
         uses: lazarevicOgnjen/git-auto-commit-action@v6
@@ -61,52 +54,19 @@ jobs:
           commit_message: "Update course content"
           file_pattern: "*.md"
 
-      # Step 8: Send notifications dynamically
       - name: Send course notifications
         env:
           EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        run: |
-          import os
-          import subprocess
-
-          courses = {
-              "bp": {"subject": "🎓 Baze podataka", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4", "attachment": "bp.png"},
-              "dmat": {"subject": "🎓 Diskretna matematika", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=97", "attachment": "dmat.png"},
-              "sp": {"subject": "🎓 Strukture podataka", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9", "attachment": "sp.png"},
-              "pj": {"subject": "🎓 Programski jezici", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11", "attachment": "pj.png"},
-              "oopj": {"subject": "🎓 Objektno orijentisano projektovanje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62", "attachment": "oopj.png"},
-              "lp": {"subject": "🎓 Logičko projektovanje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41", "attachment": "lp.png"},
-              "oop": {"subject": "🎓 Objektno orijentisano programiranje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=45", "attachment": "oop.png"},
-              "aor1": {"subject": "🎓 Arhitektura i organizacija računara 1", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=139", "attachment": "aor1.png"},
-              "aip": {"subject": "🎓 Algoritmi i programiranje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=3", "attachment": "aip.png"},
-              "uur": {"subject": "🎓 Algoritmi i programiranje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=2", "attachment": "uur.png"},
-              "sip": {"subject": "🎓 SIP", "forum": "https://sip.elfak.ni.ac.rs/", "attachment": "sip.png"}
-          }
-
-          for course, info in courses.items():
-              changed = os.environ.get(f"{course}_changed", "false")
-              email_file = f"{course}_emails.md"
-
-              if changed == "true" and os.path.exists(email_file):
-                  with open(email_file) as f:
-                      to_emails = [line.strip() for line in f if line.strip()]
-                  
-                  if not to_emails:
-                      print(f"No emails for {course}, skipping.")
-                      continue
-
-                  print(f"Sending {course} email to: {to_emails}")
-
-                  # Call dawidd6/action-send-mail via subprocess
-                  subprocess.run([
-                      "gh", "run", "send-mail",  # placeholder for your actual email send logic
-                      "--server_address", "smtp.gmail.com",
-                      "--server_port", "587",
-                      "--username", os.environ["EMAIL_USERNAME"],
-                      "--password", os.environ["EMAIL_PASSWORD"],
-                      "--to", ",".join(to_emails),
-                      "--subject", info["subject"],
-                      "--html_body", f"<p>Check forum: <a href='{info['forum']}'>{info['subject']} Forum</a></p>",
-                      "--attachments", info["attachment"]
-                  ])
+          bp_changed: ${{ steps.detect.outputs.bp_changed }}
+          dmat_changed: ${{ steps.detect.outputs.dmat_changed }}
+          sp_changed: ${{ steps.detect.outputs.sp_changed }}
+          pj_changed: ${{ steps.detect.outputs.pj_changed }}
+          oopj_changed: ${{ steps.detect.outputs.oopj_changed }}
+          lp_changed: ${{ steps.detect.outputs.lp_changed }}
+          oop_changed: ${{ steps.detect.outputs.oop_changed }}
+          aor1_changed: ${{ steps.detect.outputs.aor1_changed }}
+          aip_changed: ${{ steps.detect.outputs.aip_changed }}
+          uur_changed: ${{ steps.detect.outputs.uur_changed }}
+          sip_changed: ${{ steps.detect.outputs.sip_changed }}
+        run: python send_notifications.py
