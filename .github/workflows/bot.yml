@@ -358,3 +358,31 @@ jobs:
               </body>
             </html>
           attachments: uur.png
+
+      - name: SIP notification
+        if: steps.detect.outputs.sip_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 SIP'
+          to: ${{ steps.emails.outputs.uur_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:sip_image" alt="SIP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://sip.elfak.ni.ac.rs/">SIP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: sip.png
