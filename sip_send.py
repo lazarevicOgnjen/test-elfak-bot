@@ -12,6 +12,7 @@ HTML_BODY = """
 <html><body>
 <p><img src="cid:embedded_image" style="width:300px;border-radius:10px;"></p>
 <p>Sip -> <a href="">here</a>link</p>
+
 <p>Google form -> <a href="">here</a>link</p>
 </body></html>
 """
