@@ -35,8 +35,9 @@ jobs:
         env:
           MAIL: ${{ secrets.MAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
-        run: python cs_elfak.py
-             python sip.py
+        run: |
+          python cs_elfak.py
+          python sip.py
 
       # ✅ Detect if markdown files changed
       - name: Check for real changes
