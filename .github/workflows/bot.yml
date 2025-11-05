@@ -49,7 +49,7 @@ jobs:
       - name: Check for course changes
         id: changes
         run: |
-          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md sip_emails.md
+          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md sip.md aip.md uur.md
           if git diff --cached --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
@@ -61,7 +61,7 @@ jobs:
         id: detect
         if: steps.changes.outputs.changed == 'true'
         run: |
-          for course in bp sp pj oopj lp oop aor1; do
+          for course in bp sp pj oopj lp oop aor1 dmat aip uur sip; do
             if git diff --name-only HEAD~1 HEAD | grep -q "^${course}.md$"; then
               echo "${course}_changed=true" >> $GITHUB_OUTPUT
               echo "🔄 $course has new updates"
@@ -70,17 +70,17 @@ jobs:
             fi
           done
 
-      # ✅ Commit all changes (course content + email lists)
+      # ✅ Commit all changes
       - name: Commit changes
         if: steps.changes.outputs.changed == 'true'
         uses: lazarevicOgnjen/git-auto-commit-action@v6
         with:
-          commit_message: "Update course content and subscriptions"
+          commit_message: "Update course content"
           file_pattern: "*.md"
 
       # ✅ Email Notifications - Each subject sends to its own email list
       - name: BP notification
-        if: steps.detect.outputs.bp_changed == 'true' && steps.emails.outputs.bp_emails != ''
+        if: steps.detect.outputs.bp_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -89,22 +89,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Baze podataka'
           to: ${{ steps.emails.outputs.bp_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
                 <img src="cid:bp_image" alt="BP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">BP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">BP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
@@ -112,7 +108,7 @@ jobs:
           attachments: bp.png
 
       - name: DMAT notification
-        if: steps.detect.outputs.dmat_changed == 'true' && steps.emails.outputs.dmat_emails != ''
+        if: steps.detect.outputs.dmat_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -121,22 +117,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Diskretna matematika'
           to: ${{ steps.emails.outputs.dmat_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
                 <img src="cid:dmat_image" alt="DMAT Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=97&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">DMAT Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=97&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">DMAT Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
@@ -144,7 +136,7 @@ jobs:
           attachments: dmat.png
 
       - name: SP notification
-        if: steps.detect.outputs.sp_changed == 'true' && steps.emails.outputs.sp_emails != ''
+        if: steps.detect.outputs.sp_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -153,22 +145,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Strukture podataka'
           to: ${{ steps.emails.outputs.sp_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
                 <img src="cid:sp_image" alt="SP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">SP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">SP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
@@ -176,7 +164,7 @@ jobs:
           attachments: sp.png
 
       - name: PJ notification
-        if: steps.detect.outputs.pj_changed == 'true' && steps.emails.outputs.pj_emails != ''
+        if: steps.detect.outputs.pj_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -185,22 +173,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Programski jezici'
           to: ${{ steps.emails.outputs.pj_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
                 <img src="cid:pj_image" alt="PJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">PJ Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">PJ Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
@@ -208,7 +192,7 @@ jobs:
           attachments: pj.png
 
       - name: OOPJ notification
-        if: steps.detect.outputs.oopj_changed == 'true' && steps.emails.outputs.oopj_emails != ''
+        if: steps.detect.outputs.oopj_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -217,22 +201,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Objektno orijentisano projektovanje'
           to: ${{ steps.emails.outputs.oopj_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
                 <img src="cid:oopj_image" alt="OOPJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOPJ Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOPJ Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
@@ -240,7 +220,7 @@ jobs:
           attachments: oopj.png
 
       - name: LP notification
-        if: steps.detect.outputs.lp_changed == 'true' && steps.emails.outputs.lp_emails != ''
+        if: steps.detect.outputs.lp_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -249,22 +229,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Logičko projektovanje'
           to: ${{ steps.emails.outputs.lp_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
                 <img src="cid:lp_image" alt="LP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">LP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">LP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
@@ -272,7 +248,7 @@ jobs:
           attachments: lp.png
 
       - name: OOP notification
-        if: steps.detect.outputs.oop_changed == 'true' && steps.emails.outputs.oop_emails != ''
+        if: steps.detect.outputs.oop_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -281,22 +257,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Objektno orijentisano programiranje'
           to: ${{ steps.emails.outputs.oop_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
                 <img src="cid:oop_image" alt="OOP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
                 <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2025&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOP Forum</a>
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=45&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOP Forum</a>
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
@@ -304,7 +276,7 @@ jobs:
           attachments: oop.png
 
       - name: AOR1 notification
-        if: steps.detect.outputs.aor1_changed == 'true' && steps.emails.outputs.aor1_emails != ''
+        if: steps.detect.outputs.aor1_changed == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -313,7 +285,7 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: '🎓 Arhitektura i organizacija računara 1'
           to: ${{ steps.emails.outputs.aor1_emails }}
-          from: ELFAK Bot
+          from: Elfak bot
           html_body: |
             <html>
               <body>
@@ -323,14 +295,66 @@ jobs:
                 </p>
                 <p><small>
                   🔔 <strong>Manage your notifications:</strong>
-                  <a href="YOUR_SUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Update Preferences
-                  </a>
-                  | 
-                  <a href="YOUR_UNSUBSCRIBE_FORM_LINK" style="color: #666; text-decoration: underline;">
-                    Unsubscribe
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
                   </a>
                 </small></p>
               </body>
             </html>
           attachments: aor1.png
+
+      - name: AIP notification
+        if: steps.detect.outputs.aip_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Algoritmi i programiranje'
+          to: ${{ steps.emails.outputs.aip_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:aip_image" alt="AIP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=3&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">AIP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: aip.png
+
+      - name: UUR notification
+        if: steps.detect.outputs.uur_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Algoritmi i programiranje'
+          to: ${{ steps.emails.outputs.uur_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:uur_image" alt="UUR Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=2&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">UUR Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: uur.png
