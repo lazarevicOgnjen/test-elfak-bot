@@ -11,7 +11,8 @@ RECEIVERS_FILE, IMAGE_PATH = "lp_emails.md", "lp.png"
 HTML_BODY = """
 <html><body>
 <p><img src="cid:embedded_image" style="width:300px;border-radius:10px;"></p>
-<p>Lp forum-> <a href="">here</a>link</p>
+<p>LP forum-> <a href="">here</a>link</p>
+
 <p>Google form -> <a href="">here</a>link</p>
 </body></html>
 """
