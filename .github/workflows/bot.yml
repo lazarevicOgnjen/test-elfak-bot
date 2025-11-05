@@ -38,38 +38,37 @@ jobs:
         run: python cs_elfak.py
              python sip.py
 
-      # ✅ Detect if course content changed
-      - name: Check for course changes
+      # ✅ Detect if markdown files changed
+      - name: Check for real changes
         id: changes
         run: |
-          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md sip.md aip.md uur.md
+          git add *.md
           if git diff --cached --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      # ✅ Detect which specific course changed
-      - name: Detect course changes
-        id: detect
-        if: steps.changes.outputs.changed == 'true'
-        run: |
-          for course in bp sp pj oopj lp oop aor1 dmat aip uur sip; do
-            if git diff --name-only HEAD~1 HEAD | grep -q "^${course}.md$"; then
-              echo "${course}_changed=true" >> $GITHUB_OUTPUT
-              echo "🔄 $course has new updates"
-            else
-              echo "${course}_changed=false" >> $GITHUB_OUTPUT
-            fi
-          done
-
-      # ✅ Commit all changes
+      # ✅ Commit only if changed
       - name: Commit changes
         if: steps.changes.outputs.changed == 'true'
         uses: lazarevicOgnjen/git-auto-commit-action@v6
         with:
-          commit_message: "Update course content"
+          commit_message: Update markdown
           file_pattern: "*.md"
+
+      # ✅ Detect changed files
+      - name: Detect per-file changes
+        id: detect
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          for f in bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md sip.md aip.md uur.md; do
+            if git diff --name-only HEAD~1 HEAD | grep -q $f; then
+              echo "${f%.md}_changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "${f%.md}_changed=false" >> $GITHUB_OUTPUT
+            fi
+          done
 
       # ✅ Email Notifications - Each subject sends to its own email list
       - name: BP notification
