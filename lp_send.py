@@ -23,7 +23,7 @@ with open(RECEIVERS_FILE) as f:
 if recipients:
     for to_email in recipients:
         msg = MIMEMultipart("related")
-        msg["From"], msg["To"], msg["Subject"] = SENDER_EMAIL, to_email, "🎓 LP"
+        msg["From"], msg["To"], msg["Subject"] = "Elfak bot", to_email, "🎓 LP"
         alt = MIMEMultipart("alternative")
         msg.attach(alt)
         alt.attach(MIMEText(HTML_BODY, "html"))
