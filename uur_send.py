@@ -11,7 +11,7 @@ RECEIVERS_FILE, IMAGE_PATH = "uur_emails.md", "uur.png"
 HTML_BODY = """
 <html><body>
 <p><img src="cid:embedded_image" style="width:300px;border-radius:10px;"></p>
-<p>UUR forum -> <a href="">here</a>link</p>
+<p>UUR forum -> <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=2&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">link</a></p>
 
 <p>Google form -> <a href="https://forms.gle/2XaMVYxLjiVikKCw5">link</a></p>
 </body></html>
