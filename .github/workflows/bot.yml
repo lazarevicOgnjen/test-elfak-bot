@@ -8,72 +8,381 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Step 2: Setup Python environment
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Install Chrome and ChromeDriver
-        uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: stable
+      # Step 3: Install system dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 wget
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable chromium-chromedriver
 
+      # Step 4: Install Python packages
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # NEW STEP 5: Update email lists from Google Sheets
+      - name: Update email subscriptions
+        run: python email_sheet.py
+
+      # Step 6: Run main scraper
       - name: Run main script
         env:
           MAIL: ${{ secrets.MAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: python main.py
 
+      # ✅ Detect if course content changed
+      - name: Check for course changes
+        id: changes
+        run: |
+          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md sip.md aip.md uur.md
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      # ✅ Detect which specific course changed
       - name: Detect course changes
         id: detect
+        if: steps.changes.outputs.changed == 'true'
         run: |
-          echo "Checking for changes in course files..."
-          CHANGED=false
           for course in bp sp pj oopj lp oop aor1 dmat aip uur sip; do
             if git diff --name-only HEAD~1 HEAD | grep -q "^${course}.md$"; then
-              echo "✅ ${course}.md has changes"
               echo "${course}_changed=true" >> $GITHUB_OUTPUT
-              CHANGED=true
+              echo "🔄 $course has new updates"
             else
-              echo "❌ ${course}.md has no changes"
               echo "${course}_changed=false" >> $GITHUB_OUTPUT
             fi
           done
-          echo "any_changed=$CHANGED" >> $GITHUB_OUTPUT
-          echo "Changed files:"
-          git status --porcelain
 
+      # ✅ Commit all changes
       - name: Commit changes
-        if: steps.detect.outputs.any_changed == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add *.md
-          git commit -m "Update course content"
-          git push
+        if: steps.changes.outputs.changed == 'true'
+        uses: lazarevicOgnjen/git-auto-commit-action@v6
+        with:
+          commit_message: "Update course content"
+          file_pattern: "*.md"
 
-      - name: Send course notifications
-        if: steps.detect.outputs.any_changed == 'true'
-        env:
-          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          bp_changed: ${{ steps.detect.outputs.bp_changed }}
-          dmat_changed: ${{ steps.detect.outputs.dmat_changed }}
-          sp_changed: ${{ steps.detect.outputs.sp_changed }}
-          pj_changed: ${{ steps.detect.outputs.pj_changed }}
-          oopj_changed: ${{ steps.detect.outputs.oopj_changed }}
-          lp_changed: ${{ steps.detect.outputs.lp_changed }}
-          oop_changed: ${{ steps.detect.outputs.oop_changed }}
-          aor1_changed: ${{ steps.detect.outputs.aor1_changed }}
-          aip_changed: ${{ steps.detect.outputs.aip_changed }}
-          uur_changed: ${{ steps.detect.outputs.uur_changed }}
-          sip_changed: ${{ steps.detect.outputs.sip_changed }}
-        run: python send.py
+      # ✅ Email Notifications - Each subject sends to its own email list
+      - name: BP notification
+        if: steps.detect.outputs.bp_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Baze podataka'
+          to: ${{ steps.emails.outputs.bp_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:bp_image" alt="BP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">BP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: bp.png
+
+      - name: DMAT notification
+        if: steps.detect.outputs.dmat_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Diskretna matematika'
+          to: ${{ steps.emails.outputs.dmat_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:dmat_image" alt="DMAT Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=97&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">DMAT Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: dmat.png
+
+      - name: SP notification
+        if: steps.detect.outputs.sp_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Strukture podataka'
+          to: ${{ steps.emails.outputs.sp_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:sp_image" alt="SP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">SP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: sp.png
+
+      - name: PJ notification
+        if: steps.detect.outputs.pj_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Programski jezici'
+          to: ${{ steps.emails.outputs.pj_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:pj_image" alt="PJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">PJ Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: pj.png
+
+      - name: OOPJ notification
+        if: steps.detect.outputs.oopj_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Objektno orijentisano projektovanje'
+          to: ${{ steps.emails.outputs.oopj_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:oopj_image" alt="OOPJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOPJ Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: oopj.png
+
+      - name: LP notification
+        if: steps.detect.outputs.lp_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Logičko projektovanje'
+          to: ${{ steps.emails.outputs.lp_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:lp_image" alt="LP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">LP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: lp.png
+
+      - name: OOP notification
+        if: steps.detect.outputs.oop_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Objektno orijentisano programiranje'
+          to: ${{ steps.emails.outputs.oop_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:oop_image" alt="OOP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=45&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: oop.png
+
+      - name: AOR1 notification
+        if: steps.detect.outputs.aor1_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Arhitektura i organizacija računara 1'
+          to: ${{ steps.emails.outputs.aor1_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:aor1_image" alt="AOR1 Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=139&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2020&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">AOR1 Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: aor1.png
+
+      - name: AIP notification
+        if: steps.detect.outputs.aip_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Algoritmi i programiranje'
+          to: ${{ steps.emails.outputs.aip_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:aip_image" alt="AIP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=3&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">AIP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: aip.png
+
+      - name: UUR notification
+        if: steps.detect.outputs.uur_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 Uvod u računarstvo'
+          to: ${{ steps.emails.outputs.uur_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:uur_image" alt="UUR Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=2&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">UUR Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: uur.png
+
+      - name: SIP notification
+        if: steps.detect.outputs.sip_changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🎓 SIP'
+          to: ${{ steps.emails.outputs.sip_emails }}
+          from: Elfak bot
+          html_body: |
+            <html>
+              <body>
+                <img src="cid:sip_image" alt="SIP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
+                <p>Check the course page for details: 
+                  <a href="https://sip.elfak.ni.ac.rs/">SIP Forum</a>
+                </p>
+                <p><small>
+                  🔔 <strong>Manage your notifications:</strong>
+                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
+                    Form link
+                  </a>
+                </small></p>
+              </body>
+            </html>
+          attachments: sip.png
