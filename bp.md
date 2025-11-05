@@ -7,7 +7,7 @@ Search results: 20
 »
 Next page
 News forum -> Rezultati ispita - OKTOBAR 2 -> Pregled osvojenih poena i predlog ocena - OKTOBAR 2
-by Leonid Stoimenov - Tuesday, 4 November 2025, 10:32 AMm
+by Leonid Stoimenov - Tuesday, 4 November 2025, 10:32 AM
 U prilogu je pregled osvojenih poena i predlog ocena.
 Upis ocena je u sredu, 5.11.2025 u 13:00  12:00 u prostoriji M2-2.
 
