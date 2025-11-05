@@ -69,4 +69,4 @@ jobs:
           aip_changed: ${{ steps.detect.outputs.aip_changed }}
           uur_changed: ${{ steps.detect.outputs.uur_changed }}
           sip_changed: ${{ steps.detect.outputs.sip_changed }}
-        run: python send_notifications.py
+        run: python send.py
