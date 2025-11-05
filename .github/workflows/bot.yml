@@ -35,7 +35,7 @@ jobs:
         env:
           MAIL: ${{ secrets.MAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
-        run: python cs_elfak.py sip.py
+        run: python cs_elfak.py ; sip.py
 
       # ✅ Detect if course content changed
       - name: Check for course changes
