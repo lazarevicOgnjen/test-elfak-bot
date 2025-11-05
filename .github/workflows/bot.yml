@@ -34,355 +34,79 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # NEW STEP 5: Update email lists from Google Sheets
-      - name: Update email subscriptions
-        run: python email_sheet.py
-
-      # Step 6: Run main scraper
+      # Step 5: Run main scraper
       - name: Run main script
         env:
           MAIL: ${{ secrets.MAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: python main.py
 
-      # ✅ Detect if course content changed
-      - name: Check for course changes
-        id: changes
-        run: |
-          git add bp.md sp.md pj.md oopj.md lp.md oop.md aor1.md dmat.md sip.md aip.md uur.md
-          if git diff --cached --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      # ✅ Detect which specific course changed
+      # Step 6: Detect which courses changed
       - name: Detect course changes
         id: detect
-        if: steps.changes.outputs.changed == 'true'
         run: |
           for course in bp sp pj oopj lp oop aor1 dmat aip uur sip; do
             if git diff --name-only HEAD~1 HEAD | grep -q "^${course}.md$"; then
               echo "${course}_changed=true" >> $GITHUB_OUTPUT
-              echo "🔄 $course has new updates"
             else
               echo "${course}_changed=false" >> $GITHUB_OUTPUT
             fi
           done
 
-      # ✅ Commit all changes
+      # Step 7: Commit changes if any
       - name: Commit changes
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.detect.outputs.changed == 'true'
         uses: lazarevicOgnjen/git-auto-commit-action@v6
         with:
           commit_message: "Update course content"
           file_pattern: "*.md"
 
-      # ✅ Email Notifications - Each subject sends to its own email list
-      - name: BP notification
-        if: steps.detect.outputs.bp_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Baze podataka'
-          to: ${{ steps.emails.outputs.bp_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:bp_image" alt="BP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">BP Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: bp.png
+      # Step 8: Send notifications dynamically
+      - name: Send course notifications
+        env:
+          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: |
+          import os
+          import subprocess
 
-      - name: DMAT notification
-        if: steps.detect.outputs.dmat_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Diskretna matematika'
-          to: ${{ steps.emails.outputs.dmat_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:dmat_image" alt="DMAT Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=97&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">DMAT Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: dmat.png
+          courses = {
+              "bp": {"subject": "🎓 Baze podataka", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=4", "attachment": "bp.png"},
+              "dmat": {"subject": "🎓 Diskretna matematika", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=97", "attachment": "dmat.png"},
+              "sp": {"subject": "🎓 Strukture podataka", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9", "attachment": "sp.png"},
+              "pj": {"subject": "🎓 Programski jezici", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11", "attachment": "pj.png"},
+              "oopj": {"subject": "🎓 Objektno orijentisano projektovanje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62", "attachment": "oopj.png"},
+              "lp": {"subject": "🎓 Logičko projektovanje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41", "attachment": "lp.png"},
+              "oop": {"subject": "🎓 Objektno orijentisano programiranje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=45", "attachment": "oop.png"},
+              "aor1": {"subject": "🎓 Arhitektura i organizacija računara 1", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=139", "attachment": "aor1.png"},
+              "aip": {"subject": "🎓 Algoritmi i programiranje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=3", "attachment": "aip.png"},
+              "uur": {"subject": "🎓 Algoritmi i programiranje", "forum": "https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=2", "attachment": "uur.png"},
+              "sip": {"subject": "🎓 SIP", "forum": "https://sip.elfak.ni.ac.rs/", "attachment": "sip.png"}
+          }
 
-      - name: SP notification
-        if: steps.detect.outputs.sp_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Strukture podataka'
-          to: ${{ steps.emails.outputs.sp_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:sp_image" alt="SP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=9&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">SP Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: sp.png
+          for course, info in courses.items():
+              changed = os.environ.get(f"{course}_changed", "false")
+              email_file = f"{course}_emails.md"
 
-      - name: PJ notification
-        if: steps.detect.outputs.pj_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Programski jezici'
-          to: ${{ steps.emails.outputs.pj_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:pj_image" alt="PJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=11&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">PJ Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: pj.png
+              if changed == "true" and os.path.exists(email_file):
+                  with open(email_file) as f:
+                      to_emails = [line.strip() for line in f if line.strip()]
+                  
+                  if not to_emails:
+                      print(f"No emails for {course}, skipping.")
+                      continue
 
-      - name: OOPJ notification
-        if: steps.detect.outputs.oopj_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Objektno orijentisano projektovanje'
-          to: ${{ steps.emails.outputs.oopj_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:oopj_image" alt="OOPJ Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=62&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOPJ Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: oopj.png
+                  print(f"Sending {course} email to: {to_emails}")
 
-      - name: LP notification
-        if: steps.detect.outputs.lp_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Logičko projektovanje'
-          to: ${{ steps.emails.outputs.lp_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:lp_image" alt="LP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=41&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">LP Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: lp.png
-
-      - name: OOP notification
-        if: steps.detect.outputs.oop_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Objektno orijentisano programiranje'
-          to: ${{ steps.emails.outputs.oop_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:oop_image" alt="OOP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=45&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">OOP Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: oop.png
-
-      - name: AOR1 notification
-        if: steps.detect.outputs.aor1_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Arhitektura i organizacija računara 1'
-          to: ${{ steps.emails.outputs.aor1_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:aor1_image" alt="AOR1 Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=139&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2020&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">AOR1 Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: aor1.png
-
-      - name: AIP notification
-        if: steps.detect.outputs.aip_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Algoritmi i programiranje'
-          to: ${{ steps.emails.outputs.aip_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:aip_image" alt="AIP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=3&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">AIP Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: aip.png
-
-      - name: UUR notification
-        if: steps.detect.outputs.uur_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 Algoritmi i programiranje'
-          to: ${{ steps.emails.outputs.uur_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:uur_image" alt="UUR Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://cs.elfak.ni.ac.rs/nastava/mod/forum/search.php?id=2&words=&phrase=&notwords=&fullwords=&timefromrestrict=1&fromday=1&frommonth=1&fromyear=2023&fromhour=0&fromminute=0&hfromday=0&hfrommonth=0&hfromyear=0&hfromhour=0&hfromminute=0&htoday=1&htomonth=1&htoyear=1&htohour=1&htominute=1&forumid=&subject=&user=">UUR Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: uur.png
-
-      - name: SIP notification
-        if: steps.detect.outputs.sip_changed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: '🎓 SIP'
-          to: ${{ steps.emails.outputs.uur_emails }}
-          from: Elfak bot
-          html_body: |
-            <html>
-              <body>
-                <img src="cid:sip_image" alt="SIP Screenshot" style="max-width: 100%; border: 1px solid #ccc;">
-                <p>Check the course page for details: 
-                  <a href="https://sip.elfak.ni.ac.rs/">SIP Forum</a>
-                </p>
-                <p><small>
-                  🔔 <strong>Manage your notifications:</strong>
-                  <a href="https://forms.gle/2XaMVYxLjiVikKCw5" style="color: #666; text-decoration: underline;">
-                    Form link
-                  </a>
-                </small></p>
-              </body>
-            </html>
-          attachments: sip.png
+                  # Call dawidd6/action-send-mail via subprocess
+                  subprocess.run([
+                      "gh", "run", "send-mail",  # placeholder for your actual email send logic
+                      "--server_address", "smtp.gmail.com",
+                      "--server_port", "587",
+                      "--username", os.environ["EMAIL_USERNAME"],
+                      "--password", os.environ["EMAIL_PASSWORD"],
+                      "--to", ",".join(to_emails),
+                      "--subject", info["subject"],
+                      "--html_body", f"<p>Check forum: <a href='{info['forum']}'>{info['subject']} Forum</a></p>",
+                      "--attachments", info["attachment"]
+                  ])
